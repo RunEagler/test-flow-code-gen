@@ -1,0 +1,128 @@
+package {{ .PackageName }}
+
+import (
+	"testing"
+)
+
+type {{ .UpperCaseName }}Test interface {
+	testflow.TestProcess {{ range $method := .MethodProperties }}
+    Test{{ $method.Name }}(t *testing.T){{ end }}
+}
+
+type {{ .LowerCaseName }}Test struct {
+	{{ .LowerCaseName }}TestTitle {{ .LowerCaseName }}TestTitle
+	{{ .LowerCaseName }} *{{ .UpperCaseName }}
+	// add common parameters between test cases
+}
+
+type {{ .LowerCaseName }}TestTitle struct { {{ range $method := .MethodProperties }}
+	titleTest{{ $method.Name }}   string{{ end }}
+}
+
+func New{{ .UpperCaseName }}TestObject(
+    testTitles {{ .LowerCaseName }}TestTitle,
+) {{ .UpperCaseName }}Test {
+	return &{{ .LowerCaseName }}Test{
+		{{ .LowerCaseName }}: New{{ .UpperCaseName }}(),
+		{{ .LowerCaseName }}TestTitle: {{ .LowerCaseName }}TestTitle{ {{ range $method := .MethodProperties }}
+			titleTest{{ $method.Name }}:   testTitles.titleTest{{ $method.Name }},{{ end }}
+		},
+	    // add initialize common parameters between test cases
+	}
+}
+
+func New{{ .UpperCaseName }}TestTitle() {{ .LowerCaseName }}TestTitle {
+	return {{ .LowerCaseName }}TestTitle{ {{ range $method := .MethodProperties }}
+		titleTest{{ $method.Name }}:   "Test{{ $method.Name }}",{{ end }}
+	}
+}
+
+func Test{{ .UpperCaseName }}(t *testing.T) {
+	testTitles := New{{ .UpperCaseName }}TestTitle()
+	testInterface := New{{ .UpperCaseName }}TestObject(testTitles)
+	testDescribes := []testflow.Describe{ {{ range $method := .MethodProperties }}
+		{Title: testTitles.titleTest{{ $method.Name }}, Test: testInterface.Test{{ $method.Name }}},{{ end }}
+	}
+	testflow.TestSuite(t, testInterface, testDescribes)
+}
+
+func (ut *{{ .LowerCaseName }}Test) BeforeAll(t *testing.T) {}
+
+func (ut *{{ .LowerCaseName }}Test) BeforeTest(t *testing.T, testTitle string) {
+	// setup process by test method case
+	switch testTitle { {{ range $method := .MethodProperties }}
+    case ut.{{ $.LowerCaseName }}TestTitle.titleTest{{ $method.Name }}:{{ end }}
+	}
+}
+
+func (ut *{{ .LowerCaseName }}Test) BeforeCase(t *testing.T, testTitle string) {
+	// setup process by test case
+	switch testTitle { {{ range $method := .MethodProperties }}
+    case ut.{{ $.LowerCaseName }}TestTitle.titleTest{{ $method.Name }}:{{ end }}
+	}
+}
+
+func (ut *{{ .LowerCaseName }}Test) AfterAll(t *testing.T) {}
+
+func (ut *{{ .LowerCaseName }}Test) AfterTest(t *testing.T, testTitle string) {
+	// teardown process by test method case
+	switch testTitle {	{{ range $method := .MethodProperties }}
+    case ut.{{ $.LowerCaseName }}TestTitle.titleTest{{ $method.Name }}:{{ end }}
+	}
+}
+
+func (ut *{{ .LowerCaseName }}Test) AfterCase(t *testing.T, testTitle string) {
+	// teardown process by test case
+	switch testTitle {	{{ range $method := .MethodProperties }}
+    case ut.{{ $.LowerCaseName }}TestTitle.titleTest{{ $method.Name }}:{{ end }}
+	}
+}
+
+{{ range $method := .MethodProperties }}
+func (ut *{{ $.LowerCaseName }}Test) Test{{ $method.Name }}(t *testing.T) {
+    {{ $argument_len := len $method.Arguments }}{{ if gt $argument_len 0 }}
+	type Argument struct { {{ range $argument := .Arguments }}
+        {{ $argument.Name }} {{ $argument.Type }}{{ end }}
+	}
+	{{ end }}
+	type TestCase struct {
+		testflow.It
+		{{ if gt $argument_len 0 }}input  Argument{{ end }}
+		expect {{ (index $method.Responses 0).Type }}
+		expectError error
+	}
+	testCases := []TestCase{
+	    // TODO design test case
+		// {
+		// 	It: testflow.It{
+		// 		SerialNum:   1,
+		// 		Title:       "",
+		// 		TestClass:   testflow.TestClassNormal, // testflow.TestClassSemiNormal | testflow.TestClassError
+		// 		ExpectError: nil,
+		// 	},
+		// 	input: Argument{},
+		// 	expect: nil,
+		// },
+		// add test case
+	}
+	for _, testCase := range testCases {
+		t.Log(testCase.SerialNum, testCase.TestClass.String(), testCase.Title, {{ if gt $argument_len 0 }}testCase.input{{ end }}){{ $length := len $method.Responses }}
+        ut.BeforeCase(t, ut.{{ $.LowerCaseName }}TestTitle.titleTest{{ $method.Name }})
+		{{ if eq $length 0 }}
+		ut.{{ $.LowerCaseName }}.{{ $method.Name }}({{ range $argument := .Arguments }}testCase.input.{{ $argument.Name }},{{ end }})
+        {{ else if eq $length 1 }}
+		err := ut.{{ $.LowerCaseName }}.{{ $method.Name }}({{ range $argument := .Arguments }}testCase.input.{{ $argument.Name }},{{ end }})
+		fmt.Println(err)
+        //assert.Equal(t, testCase.expectError, err)
+        {{ else if eq $length 2 }}
+		result, err := ut.{{ $.LowerCaseName }}.{{ $method.Name }}({{ range $i, $argument := .Arguments }}testCase.input.{{ $argument.Name }},{{ end }})
+        fmt.Println(result)
+		fmt.Println(err)
+        //assert.Equal(t, testCase.expect, result)
+        //assert.Equal(t, testCase.expectError, err)
+        {{ end }}
+        ut.AfterCase(t, ut.{{ $.LowerCaseName }}TestTitle.titleTest{{ $method.Name }})
+    }
+}
+
+{{ end }}
